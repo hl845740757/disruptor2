@@ -173,7 +173,7 @@ public class MpUnboundedBufferSequencer<T> implements Sequencer, ProducerBarrier
         }
         while (!cursor.compareAndSet(current, next));
         // 注意：此时消费者已能看见最新的序号，但新的块可能尚未分配
-        // 生产者尝试进入新块时回收旧块，可能不及时，但足够安全和开销小
+        // 生产者进入新块时尝试回收旧块，可能不及时，但足够安全和开销小
         if (!buffer.inSameChunk(current, next)) {
             buffer.tryMoveHeadToNext(Util.getMinimumSequence(gatingBarriers, current));
             buffer.producerChunkForSequence(next);

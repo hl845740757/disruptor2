@@ -11,7 +11,7 @@
 2. Sequencer是协调的集成，而不是生产者屏障，生产者屏障有明确的抽象。
 3. 协调的基本单位是屏障`Barrier`，依赖的单位也是屏障，而不是序列`Sequence`。
 4. 反转了Barrier和Consumer之间的Sequence依赖。
-5. 剥离了Blocker和WaitStrategy，**支持不同的消费者使用不同的等待策略**。
+5. 剥离了Blocker和WaitStrategy，**消费者可以使用不同的等待策略**，但使用同一个Blocker。
 6. 库只提供了核心的协调功能，并没有提供BatchEventProcessor这样的具体组件，完全由用户控制。
 7. 内置了一套无界缓冲区`MpUnboundedBuffer`。
 
@@ -22,7 +22,7 @@ ps: 很自信地讲，我的设计更容易理解。
 关于J9的VarHandle的内存意义，建议阅读 doug
 lea文章 [Using JDK 9 Memory Order Modes](https://gee.cs.oswego.edu/dl/html/j9mm.html)
 
-
 ## 其它
 
 1. JDK要求JDK11
+2. 测试用例暂时还没迁移，因为不是直接测试RingBuffer

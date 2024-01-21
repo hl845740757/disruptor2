@@ -36,7 +36,7 @@ abstract class MpUnboundedBufferFields<E> {
     /**
      * 链表的首部
      * 1. 可能没有消费者在该块，但消费者都从该块开始查询 -- 消费者高频访问。
-     * 2. 由【生产者】更新，生产者观察到消费者进入新块时，负责回收当前块。
+     * 2. 由【生产者】更新，生产者观察到消费者进入新块时，或自身进入新块时，尝试回收当前块。
      */
     private volatile MpUnboundedBufferChunk<E> headChunk;
 
@@ -339,7 +339,7 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
         if (!casProducerChunk(currentChunk, ROTATION)) {
             return null;
         }
-        // 获得更新chunk权限，这期间其它生产者需要等待
+        // 获得更新producerChunk权限，这期间其它生产者需要等待
         for (long i = 1; i <= chunksToAppend; i++) {
             MpUnboundedBufferChunk<E> newChunk = newOrPooledChunk(currentChunk, currentChunkIndex + i);
             currentChunk.soNext(newChunk);
