@@ -24,8 +24,8 @@ import java.util.stream.Stream;
 
 abstract class RingBufferPad {
 
-    private long p1, p2, p3, p4, p5, p6, p7;
-    private long p8, p9, p10, p11, p12, p13, p14, p15;
+    private long p1, p2, p3, p4, p5, p6, p7, p8;
+    private long p9, p10, p11, p12, p13, p14, p15;
 }
 
 abstract class RingBufferFields<E> extends RingBufferPad {
@@ -47,7 +47,7 @@ abstract class RingBufferFields<E> extends RingBufferPad {
      */
     final int bufferSize;
 
-    public RingBufferFields(EventFactory<E> eventFactory, int bufferSize) {
+    public RingBufferFields(EventFactory<? extends E> eventFactory, int bufferSize) {
         Objects.requireNonNull(eventFactory, "eventFactory");
         if (!Util.isPowerOfTwo(bufferSize)) {
             throw new IllegalArgumentException("bufferSize must be a power of 2");
@@ -62,7 +62,7 @@ abstract class RingBufferFields<E> extends RingBufferPad {
 
     private static final VarHandle VH_ELEMENTS = MethodHandles.arrayElementVarHandle(Object[].class);
 
-    private void fill(EventFactory<E> eventFactory) {
+    private void fill(EventFactory<? extends E> eventFactory) {
         for (int i = 0; i < bufferSize; i++) {
             entries[BUFFER_PAD + i] = eventFactory.newInstance();
         }
@@ -72,6 +72,12 @@ abstract class RingBufferFields<E> extends RingBufferPad {
     protected final E elementAt(long sequence) {
         int index = (int) (sequence & indexMask);
         return (E) VH_ELEMENTS.get(entries, BUFFER_PAD + index);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected final void setElement(long sequence, E event) {
+        int index = (int) (sequence & indexMask);
+        VH_ELEMENTS.set(entries, BUFFER_PAD + index, event);
     }
 
     /** 用于debug和测试 */
@@ -91,10 +97,10 @@ abstract class RingBufferFields<E> extends RingBufferPad {
  */
 public final class RingBuffer<E> extends RingBufferFields<E> implements DataProvider<E> {
 
-    private long p1, p2, p3, p4, p5, p6, p7;
-    private long p8, p9, p10, p11, p12, p13, p14, p15;
+    private long p1, p2, p3, p4, p5, p6, p7, p8;
+    private long p9, p10, p11, p12, p13, p14, p15, p16;
 
-    public RingBuffer(EventFactory<E> eventFactory, int bufferSize) {
+    public RingBuffer(EventFactory<? extends E> eventFactory, int bufferSize) {
         super(eventFactory, bufferSize);
     }
 
@@ -120,5 +126,16 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements DataProv
     @Override
     public E consumerGet(long sequence) {
         return elementAt(sequence);
+    }
+
+    @Override
+    public void producerSet(long sequence, E data) {
+        Objects.requireNonNull(data);
+        setElement(sequence, data);
+    }
+
+    @Override
+    public void consumerSet(long sequence, E data) {
+        setElement(sequence, data);
     }
 }

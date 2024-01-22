@@ -21,6 +21,7 @@ package cn.wjybxx.disruptor;
  * <p>
  * 1. 组可以单线程的或多线程的，外部不关注；外部只关注其关联的屏障{@link ConsumerBarrier}。
  * 2. 屏障负责管理进度信息，消费者负责真正的消费。
+ * 3. 该接口只是一个示例实现，Barrier并没有依赖该接口 -- 依赖是反转的。
  *
  * @author wjybxx
  * date - 2024/1/18

@@ -68,6 +68,17 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
     }
 
     @Override
+    public void producerSet(long sequence, E data) {
+        Objects.requireNonNull(data);
+        buffer.setElement(sequence, data);
+    }
+
+    @Override
+    public void consumerSet(long sequence, E data) {
+        buffer.setElement(sequence,data);
+    }
+
+    @Override
     public int capacity() {
         return buffer.getBufferSize();
     }
@@ -179,10 +190,24 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
                 .setProducerType(ProducerType.MULTI);
     }
 
+    /** 多线程生产者builder */
+    public static <E> Builder<E> newMultiProducer(EventFactory<? extends E> factory) {
+        return new Builder<E>()
+                .setProducerType(ProducerType.MULTI)
+                .setFactory(factory);
+    }
+
     /** 单线程生产者builder */
     public static <E> Builder<E> newSingleProducer() {
         return new Builder<E>()
                 .setProducerType(ProducerType.SINGLE);
+    }
+
+    /** 单线程生产者builder */
+    public static <E> Builder<E> newSingleProducer(EventFactory<? extends E> factory) {
+        return new Builder<E>()
+                .setProducerType(ProducerType.SINGLE)
+                .setFactory(factory);
     }
 
     // endregion
@@ -218,7 +243,7 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
         }
 
         @Override
-        public Builder<E> setFactory(EventFactory<E> factory) {
+        public Builder<E> setFactory(EventFactory<? extends E> factory) {
             return (Builder<E>) super.setFactory(factory);
         }
 
