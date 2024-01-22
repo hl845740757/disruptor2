@@ -32,7 +32,7 @@ import java.util.concurrent.TimeoutException;
 public class BusySpinWaitStrategy implements WaitStrategy {
 
     @Override
-    public long waitFor(long sequence, Sequencer sequencer, ConsumerBarrier barrier)
+    public long waitFor(long sequence, ProducerBarrier producerBarrier, SequenceBlocker blocker, ConsumerBarrier barrier)
             throws AlertException, InterruptedException, TimeoutException {
 
         long availableSequence;

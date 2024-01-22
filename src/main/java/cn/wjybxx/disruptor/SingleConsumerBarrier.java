@@ -61,12 +61,13 @@ public class SingleConsumerBarrier implements ConsumerBarrier {
         checkAlert();
 
         // available是生产者或前置消费者的进度
-        long availableSequence = waitStrategy.waitFor(sequence, sequencer, this);
-        if (availableSequence < sequence) {
-            return availableSequence;
+        long cursorSequence = waitStrategy.waitFor(sequence,
+                sequencer.getProducerBarrier(), sequencer.getBlocker(), this);
+        if (cursorSequence < sequence) {
+            return cursorSequence;
         }
         // 只要依赖可能包含生产者，都需要检查数据的连续性
-        return sequencer.getProducerBarrier().getHighestPublishedSequence(sequence, availableSequence);
+        return sequencer.getProducerBarrier().getHighestPublishedSequence(sequence, cursorSequence);
     }
 
     @Override

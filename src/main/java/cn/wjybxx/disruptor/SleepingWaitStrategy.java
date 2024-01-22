@@ -53,7 +53,7 @@ public class SleepingWaitStrategy implements WaitStrategy {
     }
 
     @Override
-    public long waitFor(long sequence, Sequencer sequencer, ConsumerBarrier barrier)
+    public long waitFor(long sequence, ProducerBarrier producerBarrier, SequenceBlocker blocker, ConsumerBarrier barrier)
             throws AlertException, InterruptedException, TimeoutException {
 
         int counter = spinTries + yieldTries;

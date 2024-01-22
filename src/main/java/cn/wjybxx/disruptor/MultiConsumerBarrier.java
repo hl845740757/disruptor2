@@ -69,7 +69,8 @@ public class MultiConsumerBarrier implements ConsumerBarrier {
         checkAlert();
 
         // available是生产者或前置消费者的进度
-        long availableSequence = waitStrategy.waitFor(sequence, sequencer, this);
+        long availableSequence = waitStrategy.waitFor(sequence,
+                sequencer.getProducerBarrier(), sequencer.getBlocker(), this);
         if (availableSequence < sequence) {
             return availableSequence;
         }
