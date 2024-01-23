@@ -16,6 +16,7 @@
 
 package cn.wjybxx.disruptor;
 
+import javax.annotation.Nullable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 
@@ -187,6 +188,19 @@ public interface ProducerBarrier extends SequenceBarrier {
      */
     long tryNext(int n, long timeout, TimeUnit unit);
 
+    /**
+     * 获取用于阻塞等待序号的阻塞器。
+     * 1.可能为null，如果整个系统禁用了基于锁的条件等待。
+     * 2.用于创建消费者屏障。
+     */
+    @Nullable
+    SequenceBlocker getBlocker();
+
+    /**
+     * 唤醒所有因条件等待阻塞的线程
+     * {@link #getBlocker()}的快捷方法
+     */
+    void signalAllWhenBlocking();
     // endregion
 
 }

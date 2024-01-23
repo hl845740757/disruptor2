@@ -98,7 +98,7 @@ public final class MpUnboundedBufferChunk<E> {
     }
 
     /** store ordered prev */
-    final void soPrev(MpUnboundedBufferChunk<?> value) {
+    final void soPrev(MpUnboundedBufferChunk<E> value) {
         VH_PREV.setRelease(this, value);
     }
 

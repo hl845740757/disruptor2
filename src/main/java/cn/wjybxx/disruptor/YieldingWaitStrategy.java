@@ -41,7 +41,7 @@ public class YieldingWaitStrategy implements WaitStrategy {
     }
 
     @Override
-    public long waitFor(long sequence, ProducerBarrier producerBarrier, SequenceBlocker blocker, ConsumerBarrier barrier)
+    public long waitFor(long sequence, ProducerBarrier producerBarrier, ConsumerBarrier barrier)
             throws AlertException, InterruptedException, TimeoutException {
 
         int counter = spinTries;

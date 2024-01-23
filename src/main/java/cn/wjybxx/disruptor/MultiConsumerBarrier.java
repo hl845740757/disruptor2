@@ -27,7 +27,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class MultiConsumerBarrier implements ConsumerBarrier {
 
-    private final Sequencer sequencer;
+    private final ProducerBarrier producerBarrier;
     private final WaitStrategy waitStrategy;
 
     private final Sequence groupSequence = new Sequence(INITIAL_SEQUENCE);
@@ -37,12 +37,12 @@ public class MultiConsumerBarrier implements ConsumerBarrier {
     private volatile boolean alerted = false;
 
     /**
-     * @param sequencer         序号生成器
+     * @param producerBarrier   序号生成器
      * @param memberCount       消费者线程数量
      * @param waitStrategy      该组消费者的等待策略
      * @param dependentBarriers 依赖的屏障
      */
-    public MultiConsumerBarrier(Sequencer sequencer, int memberCount,
+    public MultiConsumerBarrier(ProducerBarrier producerBarrier, int memberCount,
                                 WaitStrategy waitStrategy,
                                 SequenceBarrier... dependentBarriers) {
         Objects.requireNonNull(dependentBarriers, "dependentBarriers");
@@ -50,14 +50,14 @@ public class MultiConsumerBarrier implements ConsumerBarrier {
         // 如果未显式指定前置依赖，则添加生产者依赖
         if (dependentBarriers.length == 0) {
             dependentBarriers = new SequenceBarrier[1];
-            dependentBarriers[0] = sequencer.getProducerBarrier();
+            dependentBarriers[0] = producerBarrier;
         }
         memberSequences = new Sequence[memberCount];
         for (int i = 0; i < memberCount; i++) {
             memberSequences[i] = new Sequence();
         }
 
-        this.sequencer = Objects.requireNonNull(sequencer);
+        this.producerBarrier = Objects.requireNonNull(producerBarrier);
         this.waitStrategy = Objects.requireNonNull(waitStrategy);
         this.dependentBarriers = dependentBarriers;
     }
@@ -69,13 +69,12 @@ public class MultiConsumerBarrier implements ConsumerBarrier {
         checkAlert();
 
         // available是生产者或前置消费者的进度
-        long availableSequence = waitStrategy.waitFor(sequence,
-                sequencer.getProducerBarrier(), sequencer.getBlocker(), this);
+        long availableSequence = waitStrategy.waitFor(sequence, producerBarrier, this);
         if (availableSequence < sequence) {
             return availableSequence;
         }
         // 只要依赖可能包含生产者，都需要检查数据的连续性
-        return sequencer.getProducerBarrier().getHighestPublishedSequence(sequence, availableSequence);
+        return producerBarrier.getHighestPublishedSequence(sequence, availableSequence);
     }
 
     @Override
@@ -86,7 +85,7 @@ public class MultiConsumerBarrier implements ConsumerBarrier {
     @Override
     public void alert() {
         alerted = true;
-        sequencer.signalAllWhenBlocking();
+        producerBarrier.signalAllWhenBlocking();
     }
 
     @Override

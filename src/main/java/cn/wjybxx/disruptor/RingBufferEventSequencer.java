@@ -75,7 +75,7 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
 
     @Override
     public void consumerSet(long sequence, E data) {
-        buffer.setElement(sequence,data);
+        buffer.setElement(sequence, data);
     }
 
     @Override

@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
  * 2. 不继承{@link ProducerBarrier}是为了避免暴露不必要的接口给等待策略等。
  *
  * <h3>安全停止</h3>
- * 要安全停止整个系统，必须跳跃所有消费者的{@link ConsumerBarrier#alert()}方法停止消费者，
+ * 要安全停止整个系统，必须调用所有消费者的{@link ConsumerBarrier#alert()}方法停止消费者，
  * 然后调用{@link ProducerBarrier#removeDependentBarrier(SequenceBarrier)}从生产者要追踪的屏障中删除。
  * 否则会导致死锁！！！
  * ps: {@code Sequencer}默认不追踪所有的{@link SequenceBarrier}，因此依赖用户进行管理。
@@ -87,12 +87,6 @@ public interface Sequencer {
     ProducerBarrier getProducerBarrier();
 
     /**
-     * 唤醒所有因条件等待阻塞的线程
-     * {@link #getBlocker()}的快捷方法
-     */
-    void signalAllWhenBlocking();
-
-    /**
      * 使用默认的等待策略创建一个【单线程消费者】使用的屏障。
      * ps: 用户可以创建自己的自定义实例。
      *
@@ -100,7 +94,7 @@ public interface Sequencer {
      * @return 默认的消费者屏障
      */
     default ConsumerBarrier newSingleConsumerBarrier(SequenceBarrier... barriersToTrack) {
-        return new SingleConsumerBarrier(this, getWaitStrategy(), barriersToTrack);
+        return new SingleConsumerBarrier(getProducerBarrier(), getWaitStrategy(), barriersToTrack);
     }
 
     /**
@@ -112,7 +106,8 @@ public interface Sequencer {
      * @return 默认的消费者屏障
      */
     default ConsumerBarrier newSingleConsumerBarrier(WaitStrategy waitStrategy, SequenceBarrier... barriersToTrack) {
-        return new SingleConsumerBarrier(this, waitStrategy, barriersToTrack);
+        if (waitStrategy == null) waitStrategy = getWaitStrategy();
+        return new SingleConsumerBarrier(getProducerBarrier(), waitStrategy, barriersToTrack);
     }
 
     /**
@@ -123,7 +118,7 @@ public interface Sequencer {
      * @return 默认的消费者屏障
      */
     default ConsumerBarrier newMultiConsumerBarrier(int workerCount, SequenceBarrier... barriersToTrack) {
-        return new MultiConsumerBarrier(this, workerCount, getWaitStrategy(), barriersToTrack);
+        return new MultiConsumerBarrier(getProducerBarrier(), workerCount, getWaitStrategy(), barriersToTrack);
     }
 
     /**
@@ -135,7 +130,8 @@ public interface Sequencer {
      * @return 默认的消费者屏障
      */
     default ConsumerBarrier newMultiConsumerBarrier(int workerCount, WaitStrategy waitStrategy, SequenceBarrier... barriersToTrack) {
-        return new MultiConsumerBarrier(this, workerCount, waitStrategy, barriersToTrack);
+        if (waitStrategy == null) waitStrategy = getWaitStrategy();
+        return new MultiConsumerBarrier(getProducerBarrier(), workerCount, waitStrategy, barriersToTrack);
     }
     // endregion
 }

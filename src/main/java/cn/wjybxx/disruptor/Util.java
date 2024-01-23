@@ -231,7 +231,7 @@ public final class Util {
         if (desc == null) {
             throw new IllegalArgumentException(defaultMsg);
         } else {
-            throw new IllegalArgumentException(formatMsg.formatted(desc));
+            throw new IllegalArgumentException(String.format(formatMsg, desc));
         }
     }
 

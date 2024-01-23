@@ -4,9 +4,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>cn.wjybxx.disruptor</groupId>
+    <groupId>cn.wjybxx.commons</groupId>
     <artifactId>disruptor</artifactId>
-    <version>1.0.rc1</version>
+    <version>1.0.0</version>
 
     <description>Improved Disruptor</description>
     <url>https://github.com/hl845740757/disruptor2</url>
@@ -150,9 +150,6 @@
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-deploy-plugin</artifactId>
                         <version>3.1.0</version>
-                        <configuration>
-                            <skip>true</skip>
-                        </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.sonatype.plugins</groupId>

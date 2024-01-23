@@ -32,7 +32,6 @@ public interface WaitStrategy {
      *
      * @param sequence        期望生产或消费的序号
      * @param producerBarrier 用于条件等待策略依赖策略感知生产者进度
-     * @param blocker         用于条件等待策略阻塞等待生产者
      * @param barrier         序号屏障 - 用于检测终止信号和查询依赖等。
      * @return 当前可用的序号
      * @throws AlertException       if a status change has occurred for the Disruptor
@@ -41,7 +40,6 @@ public interface WaitStrategy {
      */
     long waitFor(long sequence,
                  ProducerBarrier producerBarrier,
-                 SequenceBlocker blocker,
                  ConsumerBarrier barrier) throws AlertException, InterruptedException, TimeoutException;
 
 }

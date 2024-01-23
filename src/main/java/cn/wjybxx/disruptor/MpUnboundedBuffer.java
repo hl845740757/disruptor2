@@ -20,8 +20,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.Objects;
 
-import static cn.wjybxx.disruptor.MpUnboundedBufferChunk.NOT_USED;
-
 
 abstract class MpUnboundedBufferFields<E> {
 
@@ -366,7 +364,6 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
     private MpUnboundedBufferChunk<E> appendNextChunks(MpUnboundedBufferChunk<E> currentChunk,
                                                        long currentChunkIndex,
                                                        long chunksToAppend) {
-        assert currentChunkIndex != NOT_USED;
         if (!casProducerChunk(currentChunk, ROTATION)) {
             return null;
         }
@@ -422,7 +419,7 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
     public boolean tryMoveHeadToNext(long gatingSequence) {
         MpUnboundedBufferChunk<E> headChunk = lvHeadChunk();
         MpUnboundedBufferChunk<E> producerChunk = lvProducerChunk();
-        if (!isRecyclable(gatingSequence, headChunk, producerChunk)) {
+        if (!isRecyclable(headChunk, gatingSequence, producerChunk)) {
             return false;
         }
         if (!tryLockHead()) {
@@ -431,21 +428,32 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
         // 注意：在竞争lock成功后，head可能是过期的！必须重新检查回收条件 -- 这期间producerChunk的索引不会变化
         headChunk = lvHeadChunk();
         producerChunk = lvProducerChunk();
-        if (!isRecyclable(gatingSequence, headChunk, producerChunk)) {
+        if (!isRecyclable(headChunk, gatingSequence, producerChunk)) {
             unlockHead();
             return false;
         }
         // 注意：观察到的消费者序号可能跨越了多个块，因此可能需要回收多个块
         MpUnboundedBufferChunk<E> nextChunk = headChunk.lvNext();
         nextChunk.soPrev(null);
-        while (isRecyclable(gatingSequence, nextChunk, producerChunk)) {
+        while (isRecyclable(nextChunk, gatingSequence, producerChunk)) {
             nextChunk = nextChunk.lvNext();
             nextChunk.soPrev(null);
         }
         // 我们立即发布新的head，以允许消费者获取最新的数据
         soHeadChunk(nextChunk);
+        recycleChunks(headChunk, nextChunk);
+        unlockHead();
+        return true;
+    }
 
-        // 现在对head-nextChunk区间的块进行回收
+    private static boolean isRecyclable(MpUnboundedBufferChunk<?> chunk, long gatingSequence,
+                                        MpUnboundedBufferChunk<?> producerChunk) {
+        // 不可以回收生产者当前块，否则会导致生产者append产生竞争
+        return chunk.maxSequence() <= gatingSequence
+                && chunk.lvChunkIndex() < producerChunk.lvChunkIndex(); // ROTATION is ok
+    }
+
+    private void recycleChunks(MpUnboundedBufferChunk<E> headChunk, MpUnboundedBufferChunk<E> nextChunk) {
         MpUnboundedBufferChunk<E> freeChunk = headChunk;
         while (true) {
             MpUnboundedBufferChunk<E> tailChunk = lvTailChunk();
@@ -482,14 +490,6 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
             freeChunk.clear();
             freeChunk = tempNext;
         }
-        unlockHead();
-        return true;
-    }
-
-    private static <E> boolean isRecyclable(long gatingSequence, MpUnboundedBufferChunk<E> chunk, MpUnboundedBufferChunk<E> producerChunk) {
-        // 不可以回收生产者当前块，否则会导致生产者append产生竞争
-        return gatingSequence >= chunk.maxSequence()
-                && chunk.lvChunkIndex() < producerChunk.lvChunkIndex(); // ROTATION is ok
     }
 
 }

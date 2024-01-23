@@ -36,9 +36,9 @@ import java.util.concurrent.locks.LockSupport;
 public class BlockingWaitStrategy implements WaitStrategy {
 
     @Override
-    public long waitFor(long sequence, ProducerBarrier producerBarrier, SequenceBlocker blocker, ConsumerBarrier barrier)
+    public long waitFor(long sequence, ProducerBarrier producerBarrier, ConsumerBarrier barrier)
             throws AlertException, InterruptedException, TimeoutException {
-        Objects.requireNonNull(blocker, "blocker is null");
+        SequenceBlocker blocker = Objects.requireNonNull(producerBarrier.getBlocker(), "blocker is null");
         // 先通过条件锁等待生产者发布数据
         if (producerBarrier.sequence() < sequence) {
             blocker.lock();
