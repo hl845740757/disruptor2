@@ -26,3 +26,4 @@ lea文章 [Using JDK 9 Memory Order Modes](https://gee.cs.oswego.edu/dl/html/j9m
 
 1. JDK要求JDK11
 2. 测试用例暂时还没迁移，因为不是直接测试RingBuffer
+3. 这套框架的应用可见我并发库的EventLoop，[传送门](https://github.com/hl845740757/commons) -- 测试用例也在commons仓库。
