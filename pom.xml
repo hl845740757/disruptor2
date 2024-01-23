@@ -8,7 +8,8 @@
     <artifactId>disruptor</artifactId>
     <version>1.0.0</version>
 
-    <description>Improved Disruptor</description>
+    <name>Wjybxx-Disruptor</name>
+    <description>重写Lmax的Disruptor，保留其核心，更好的抽象和扩展性</description>
     <url>https://github.com/hl845740757/disruptor2</url>
 
     <!-- 证书 -->
@@ -21,7 +22,7 @@
     </licenses>
     <!-- 供应者信息 -->
     <scm>
-        <url>https://github.com/hl845740757/commons</url>
+        <url>https://github.com/hl845740757/disruptor2</url>
         <connection>scm:git:https://github.com/hl845740757/disruptor2.git</connection>
         <developerConnection>https://github.com/hl845740757</developerConnection>
     </scm>
