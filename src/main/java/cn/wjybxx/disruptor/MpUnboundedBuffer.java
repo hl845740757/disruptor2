@@ -26,9 +26,9 @@ abstract class MpUnboundedBufferFields<E> {
     /** 该引用表示生产者或消费者块正在执行更新 */
     protected static final MpUnboundedBufferChunk<?> ROTATION = new MpUnboundedBufferChunk<>(0, -2, null);
 
-    // region pad
+    // region padding
+    @SuppressWarnings("unused")
     private long p1, p2, p3, p4, p5, p6, p7, p8;
-//    private long p11, p12, p13, p14, p15, p16, p17, p18;
     // endregion
 
     /**
@@ -38,13 +38,19 @@ abstract class MpUnboundedBufferFields<E> {
      */
     private volatile MpUnboundedBufferChunk<E> headChunk;
 
-    // region pad
-    private long p21, p22, p23, p24, p25, p26, p27, p28;
-//    private long p31, p32, p33, p34, p35, p36, p37, p38;
+    // region padding
+    @SuppressWarnings("unused")
+    private long p11, p12, p13, p14, p15, p16, p17, p18;
     // endregion
 
     /** 用于竞争更新head */
     private volatile int headLock = 0;
+
+    // region padding
+    @SuppressWarnings("unused")
+    private long p21, p22, p23, p24, p25, p26, p27, p28;
+    // endregion
+
     /**
      * 链表的末端
      * 1. 可能超出生产者块 -- 表示包含预先配的块或回收后的块。
@@ -60,12 +66,10 @@ abstract class MpUnboundedBufferFields<E> {
      */
     private volatile MpUnboundedBufferChunk<E> producerChunk;
 
-    // region pad
-    private long p41, p42, p43, p44, p45, p46, p47, p48;
-//    private long p51, p52, p53, p54, p55, p56, p57, p58;
+    // region padding
+    @SuppressWarnings("unused")
+    private long p31, p32, p33, p34, p35, p36, p37, p38;
     // endregion
-
-    // region producer
 
     /** loadVolatileProducerChunk */
     final MpUnboundedBufferChunk<E> lvProducerChunk() {
@@ -119,7 +123,6 @@ abstract class MpUnboundedBufferFields<E> {
         return VH_TAIL_CHUNK.compareAndSet(this, current, newChunk);
     }
 
-    // endregion
     private static final VarHandle VH_HEAD_LOCK;
     private static final VarHandle VH_HEAD_CHUNK;
     private static final VarHandle VH_PRODUCER_CHUNK;
@@ -141,8 +144,7 @@ abstract class MpUnboundedBufferFields<E> {
 /**
  * 多生产者的无界缓冲区
  * 注意：
- * 1. 该缓冲区不是为性能而设计的，它的主要是目的是避免死锁。该缓冲区应当用于内部系统交互，
- * 而不应该用于与外部系统交互，对外的缓冲区都应该是有界的。<br>
+ * 1. 该缓冲区不是为性能而设计的，它的主要是目的是避免死锁。该缓冲区应当用于内部系统交互，而不应该用于与外部系统交互，对外的缓冲区都应该是有界的。
  * 2. 该缓存不会自动回收和复用块，需要外部显式调用回收 -- Sequencer需要负责回收。
  *
  * @author wjybxx
@@ -150,36 +152,31 @@ abstract class MpUnboundedBufferFields<E> {
  */
 public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> implements DataProvider<E> {
 
+    /** 事件工厂 */
+    private final EventFactory<? extends E> factory;
     /** chunkSize对应的掩码 */
     private final int chunkMask;
     /** chunk的size对应的右移偏移量 -- 用于快速计算sequence对应的chunk索引 */
     private final int chunkShift;
     /** 最大缓存块数 */
     private final int maxPooledChunks;
-    /** 事件工厂 */
-    private final EventFactory<? extends E> factory;
-
-    // region pad
-    private long p1, p2, p3, p4, p5, p6, p7, p8;
-//    private long p11, p12, p13, p14, p15, p16, p17, p18;
-    // endregion
 
     /**
+     * @param factory         事件工厂
      * @param chunkSize       单个块大小
      * @param maxPooledChunks 缓存块数量
-     * @param factory         事件工厂
      */
-    public MpUnboundedBuffer(int chunkSize,
-                             int maxPooledChunks,
-                             EventFactory<? extends E> factory) {
+    public MpUnboundedBuffer(EventFactory<? extends E> factory,
+                             int chunkSize,
+                             int maxPooledChunks) {
         if (maxPooledChunks < 0) {
             throw new IllegalArgumentException("Expecting a positive maxPooledChunks, but got:" + maxPooledChunks);
         }
         chunkSize = Util.nextPowerOfTwo(chunkSize);
+        this.factory = Objects.requireNonNull(factory, "factory");
         this.chunkMask = chunkSize - 1;
         this.chunkShift = Integer.numberOfTrailingZeros(chunkSize);
         this.maxPooledChunks = maxPooledChunks;
-        this.factory = Objects.requireNonNull(factory, "factory");
 
         MpUnboundedBufferChunk<E> firstChunk = new MpUnboundedBufferChunk<>(chunkSize, 0, null);
         firstChunk.fill(factory);
@@ -216,7 +213,6 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
 
     /** 判断两个sequence是否落在同一个chunk */
     public boolean inSameChunk(long seq1, long seq2) {
-        final int chunkShift = this.chunkShift;
         return (seq1 >> chunkShift) == (seq2 >> chunkShift);
     }
 
@@ -237,7 +233,7 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
         if (pChunk.lvChunkIndex() != seqChunkIndex) {
             pChunk = producerChunkForIndex(pChunk, seqChunkIndex);
         }
-        return pChunk.lvElement(seqChunkOffset);
+        return pChunk.lpElement(seqChunkOffset);
     }
 
     @Override
@@ -252,7 +248,7 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
         if (cChunk.lvChunkIndex() != seqChunkIndex) {
             cChunk = consumerChunkForIndex(cChunk, seqChunkIndex);
         }
-        return cChunk.lvElement(seqChunkOffset);
+        return cChunk.lpElement(seqChunkOffset);
     }
 
     @Override
@@ -273,6 +269,7 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
 
     @Override
     public void consumerSet(long sequence, E data) {
+        Objects.requireNonNull(data);
         if (sequence < 0) {
             throw new IllegalArgumentException();
         }
@@ -384,6 +381,7 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
 
     private MpUnboundedBufferChunk<E> newOrPooledChunk(MpUnboundedBufferChunk<E> prevChunk, long nextChunkIndex) {
         MpUnboundedBufferChunk<E> tailChunk;
+        MpUnboundedBufferChunk<E> nextChunk;
         while (true) {
             tailChunk = lvTailChunk();
             // 其它生产者可能正在回收head
@@ -393,7 +391,7 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
             }
             // tail可能包含预分配的块
             if (nextChunkIndex <= tailChunk.lvChunkIndex()) {
-                MpUnboundedBufferChunk<E> nextChunk = prevChunk.lvNext();
+                nextChunk = prevChunk.lvNext();
                 assert nextChunk != null && nextChunk.lvChunkIndex() == nextChunkIndex;
                 return nextChunk;
             }
@@ -403,8 +401,7 @@ public final class MpUnboundedBuffer<E> extends MpUnboundedBufferFields<E> imple
                 continue;
             }
             // 新增块到tail
-            MpUnboundedBufferChunk<E> nextChunk = new MpUnboundedBufferChunk<>(chunkSize(),
-                    nextChunkIndex, prevChunk);
+            nextChunk = new MpUnboundedBufferChunk<>(chunkSize(), nextChunkIndex, prevChunk);
             nextChunk.fill(factory);
 
             nextChunk.soPrev(tailChunk);

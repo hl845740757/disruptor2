@@ -23,22 +23,23 @@ import java.util.concurrent.TimeUnit;
  * @author wjybxx
  * date - 2024/1/20
  */
-public class MpUnboundedEventSequencer<E> implements EventSequencer<E> {
+public class MpUnboundedEventSequencer<T> implements EventSequencer<T> {
 
-    private final MpUnboundedBuffer<E> buffer;
-    private final MpUnboundedBufferSequencer<E> sequencer;
+    private final MpUnboundedBuffer<T> buffer;
+    private final MpUnboundedBufferSequencer<T> sequencer;
 
-    public MpUnboundedEventSequencer(Builder<E> builder) {
+    private MpUnboundedEventSequencer(Builder<T> builder) {
         Objects.requireNonNull(builder);
-        buffer = new MpUnboundedBuffer<>(builder.getChunkSize(),
-                builder.getMaxPooledChunks(),
-                builder.getFactory());
+        buffer = new MpUnboundedBuffer<>(builder.getFactory(),
+                builder.getChunkSize(),
+                builder.getMaxPooledChunks());
         sequencer = new MpUnboundedBufferSequencer<>(buffer,
                 builder.getWaitStrategy(),
                 builder.getBlocker());
     }
 
-    public MpUnboundedBuffer<E> getBuffer() {
+    /** buffer */
+    public MpUnboundedBuffer<T> getBuffer() {
         return buffer;
     }
 
@@ -60,27 +61,27 @@ public class MpUnboundedEventSequencer<E> implements EventSequencer<E> {
     // region buffer
 
     @Override
-    public final E get(long sequence) {
+    public final T get(long sequence) {
         return buffer.get(sequence);
     }
 
     @Override
-    public final E producerGet(long sequence) {
+    public final T producerGet(long sequence) {
         return buffer.producerGet(sequence);
     }
 
     @Override
-    public final E consumerGet(long sequence) {
+    public final T consumerGet(long sequence) {
         return buffer.consumerGet(sequence);
     }
 
     @Override
-    public void producerSet(long sequence, E data) {
+    public void producerSet(long sequence, T data) {
         buffer.producerSet(sequence, data);
     }
 
     @Override
-    public void consumerSet(long sequence, E data) {
+    public void consumerSet(long sequence, T data) {
         buffer.consumerSet(sequence, data);
     }
 
@@ -106,36 +107,7 @@ public class MpUnboundedEventSequencer<E> implements EventSequencer<E> {
 
     // endregion
 
-    // region override
-
-    public void addGatingBarriers(SequenceBarrier... gatingBarriers) {
-        sequencer.addGatingBarriers(gatingBarriers);
-    }
-
-    @Override
-    public boolean removeGatingBarrier(SequenceBarrier gatingBarrier) {
-        return sequencer.removeGatingBarrier(gatingBarrier);
-    }
-
-    @Override
-    public ConsumerBarrier newSingleConsumerBarrier(SequenceBarrier... barriersToTrack) {
-        return sequencer.newSingleConsumerBarrier(barriersToTrack);
-    }
-
-    @Override
-    public ConsumerBarrier newSingleConsumerBarrier(WaitStrategy waitStrategy, SequenceBarrier... barriersToTrack) {
-        return sequencer.newSingleConsumerBarrier(waitStrategy, barriersToTrack);
-    }
-
-    @Override
-    public ConsumerBarrier newMultiConsumerBarrier(int workerCount, SequenceBarrier... barriersToTrack) {
-        return sequencer.newMultiConsumerBarrier(workerCount, barriersToTrack);
-    }
-
-    @Override
-    public ConsumerBarrier newMultiConsumerBarrier(int workerCount, WaitStrategy waitStrategy, SequenceBarrier... barriersToTrack) {
-        return sequencer.newMultiConsumerBarrier(workerCount, waitStrategy, barriersToTrack);
-    }
+    // region producer
 
     @Override
     public boolean hasAvailableCapacity(int requiredCapacity) {
@@ -190,22 +162,21 @@ public class MpUnboundedEventSequencer<E> implements EventSequencer<E> {
 
     // region builder
 
-    public static <E> Builder<E> newBuilder() {
-        return new Builder<>();
+    public static <T> Builder<T> newBuilder(EventFactory<? extends T> factory) {
+        return new Builder<>(factory);
     }
 
-    public static <E> Builder<E> newBuilder(EventFactory<? extends E> factory) {
-        return new Builder<E>()
-                .setFactory(factory);
-    }
-
-    public static class Builder<E> extends EventSequencerBuilder<E> {
+    public static class Builder<T> extends EventSequencerBuilder<T> {
 
         private int chunkSize = 1024;
         private int maxPooledChunks = 8;
 
+        public Builder(EventFactory<? extends T> factory) {
+            super(factory);
+        }
+
         @Override
-        public MpUnboundedEventSequencer<E> build() {
+        public MpUnboundedEventSequencer<T> build() {
             return new MpUnboundedEventSequencer<>(this);
         }
 
@@ -214,7 +185,7 @@ public class MpUnboundedEventSequencer<E> implements EventSequencer<E> {
             return chunkSize;
         }
 
-        public Builder<E> setChunkSize(int chunkSize) {
+        public Builder<T> setChunkSize(int chunkSize) {
             this.chunkSize = chunkSize;
             return this;
         }
@@ -224,34 +195,29 @@ public class MpUnboundedEventSequencer<E> implements EventSequencer<E> {
             return maxPooledChunks;
         }
 
-        public Builder<E> setMaxPooledChunks(int maxPooledChunks) {
+        public Builder<T> setMaxPooledChunks(int maxPooledChunks) {
             this.maxPooledChunks = maxPooledChunks;
             return this;
         }
 
         @Override
-        public Builder<E> setFactory(EventFactory<? extends E> factory) {
-            return (Builder<E>) super.setFactory(factory);
+        public Builder<T> setProducerSleepNanos(long producerSleepNanos) {
+            return (Builder<T>) super.setProducerSleepNanos(producerSleepNanos);
         }
 
         @Override
-        public Builder<E> setProducerSleepNanos(long producerSleepNanos) {
-            return (Builder<E>) super.setProducerSleepNanos(producerSleepNanos);
+        public Builder<T> setWaitStrategy(WaitStrategy waitStrategy) {
+            return (Builder<T>) super.setWaitStrategy(waitStrategy);
         }
 
         @Override
-        public Builder<E> setWaitStrategy(WaitStrategy waitStrategy) {
-            return (Builder<E>) super.setWaitStrategy(waitStrategy);
+        public Builder<T> enableBlocker() {
+            return (Builder<T>) super.enableBlocker();
         }
 
         @Override
-        public Builder<E> enableBlocker() {
-            return (Builder<E>) super.enableBlocker();
-        }
-
-        @Override
-        public Builder<E> disableBlocker() {
-            return (Builder<E>) super.disableBlocker();
+        public Builder<T> disableBlocker() {
+            return (Builder<T>) super.disableBlocker();
         }
     }
 

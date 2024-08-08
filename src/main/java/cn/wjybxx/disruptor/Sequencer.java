@@ -68,14 +68,6 @@ public interface Sequencer {
     // region wjybxx
 
     /**
-     * 获取用于阻塞等待序号的阻塞器。
-     * 1.可能为null，如果整个系统禁用了基于锁的条件等待。
-     * 2.用于创建消费者屏障。
-     */
-    @Nullable
-    SequenceBlocker getBlocker();
-
-    /**
      * 默认等待策略
      */
     @Nonnull
@@ -114,6 +106,7 @@ public interface Sequencer {
      * 使用默认的等待策略创建一个【多线程消费者】使用的屏障。
      * ps: 用户可以创建自己的自定义实例。
      *
+     * @param workerCount     消费者数量
      * @param barriersToTrack 该组消费者依赖的屏障
      * @return 默认的消费者屏障
      */
@@ -125,6 +118,7 @@ public interface Sequencer {
      * 使用默认的等待策略创建一个【多线程消费者】使用的屏障。
      * ps: 用户可以创建自己的自定义实例。
      *
+     * @param workerCount     消费者数量
      * @param waitStrategy    该组消费者的等待策略
      * @param barriersToTrack 该组消费者依赖的屏障
      * @return 默认的消费者屏障

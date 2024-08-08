@@ -23,12 +23,12 @@ import java.util.concurrent.TimeUnit;
  * @author wjybxx
  * date - 2024/1/17
  */
-public class RingBufferEventSequencer<E> implements EventSequencer<E> {
+public class RingBufferEventSequencer<T> implements EventSequencer<T> {
 
-    private final RingBuffer<E> buffer;
+    private final RingBuffer<T> buffer;
     private final RingBufferSequencer sequencer;
 
-    public RingBufferEventSequencer(Builder<E> builder) {
+    private RingBufferEventSequencer(Builder<T> builder) {
         Objects.requireNonNull(builder);
         this.buffer = new RingBuffer<>(builder.getFactory(), builder.getBufferSize());
         if (builder.getProducerType() == ProducerType.MULTI) {
@@ -46,35 +46,35 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
         }
     }
 
-    public RingBuffer<E> getBuffer() {
+    public RingBuffer<T> getBuffer() {
         return buffer;
     }
 
     // region buffer
 
     @Override
-    public final E get(long sequence) {
-        return buffer.elementAt(sequence);
+    public final T get(long sequence) {
+        return buffer.getElement(sequence);
     }
 
     @Override
-    public final E producerGet(long sequence) {
-        return buffer.elementAt(sequence);
+    public final T producerGet(long sequence) {
+        return buffer.getElement(sequence);
     }
 
     @Override
-    public final E consumerGet(long sequence) {
-        return buffer.elementAt(sequence);
+    public final T consumerGet(long sequence) {
+        return buffer.getElement(sequence);
     }
 
     @Override
-    public void producerSet(long sequence, E data) {
+    public void producerSet(long sequence, T data) {
         Objects.requireNonNull(data);
         buffer.setElement(sequence, data);
     }
 
     @Override
-    public void consumerSet(long sequence, E data) {
+    public void consumerSet(long sequence, T data) {
         buffer.setElement(sequence, data);
     }
 
@@ -100,36 +100,7 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
 
     // endregion
 
-    // region override
-
-    public void addGatingBarriers(SequenceBarrier... gatingBarriers) {
-        sequencer.addGatingBarriers(gatingBarriers);
-    }
-
-    @Override
-    public boolean removeGatingBarrier(SequenceBarrier gatingBarrier) {
-        return sequencer.removeGatingBarrier(gatingBarrier);
-    }
-
-    @Override
-    public ConsumerBarrier newSingleConsumerBarrier(SequenceBarrier... barriersToTrack) {
-        return sequencer.newSingleConsumerBarrier(barriersToTrack);
-    }
-
-    @Override
-    public ConsumerBarrier newSingleConsumerBarrier(WaitStrategy waitStrategy, SequenceBarrier... barriersToTrack) {
-        return sequencer.newSingleConsumerBarrier(waitStrategy, barriersToTrack);
-    }
-
-    @Override
-    public ConsumerBarrier newMultiConsumerBarrier(int workerCount, SequenceBarrier... barriersToTrack) {
-        return sequencer.newMultiConsumerBarrier(workerCount, barriersToTrack);
-    }
-
-    @Override
-    public ConsumerBarrier newMultiConsumerBarrier(int workerCount, WaitStrategy waitStrategy, SequenceBarrier... barriersToTrack) {
-        return sequencer.newMultiConsumerBarrier(workerCount, waitStrategy, barriersToTrack);
-    }
+    // region producer
 
     @Override
     public boolean hasAvailableCapacity(int requiredCapacity) {
@@ -185,38 +156,28 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
     // region builder
 
     /** 多线程生产者builder */
-    public static <E> Builder<E> newMultiProducer() {
-        return new Builder<E>()
+    public static <T> Builder<T> newMultiProducer(EventFactory<? extends T> factory) {
+        return new Builder<T>(factory)
                 .setProducerType(ProducerType.MULTI);
     }
 
-    /** 多线程生产者builder */
-    public static <E> Builder<E> newMultiProducer(EventFactory<? extends E> factory) {
-        return new Builder<E>()
-                .setProducerType(ProducerType.MULTI)
-                .setFactory(factory);
-    }
-
     /** 单线程生产者builder */
-    public static <E> Builder<E> newSingleProducer() {
-        return new Builder<E>()
+    public static <T> Builder<T> newSingleProducer(EventFactory<? extends T> factory) {
+        return new Builder<T>(factory)
                 .setProducerType(ProducerType.SINGLE);
     }
 
-    /** 单线程生产者builder */
-    public static <E> Builder<E> newSingleProducer(EventFactory<? extends E> factory) {
-        return new Builder<E>()
-                .setProducerType(ProducerType.SINGLE)
-                .setFactory(factory);
-    }
-
-    public static class Builder<E> extends EventSequencerBuilder<E> {
+    public static class Builder<T> extends EventSequencerBuilder<T> {
 
         private ProducerType producerType = ProducerType.MULTI;
         private int bufferSize = 8192;
 
+        public Builder(EventFactory<? extends T> factory) {
+            super(factory);
+        }
+
         @Override
-        public RingBufferEventSequencer<E> build() {
+        public RingBufferEventSequencer<T> build() {
             return new RingBufferEventSequencer<>(this);
         }
 
@@ -225,7 +186,7 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
             return producerType;
         }
 
-        public Builder<E> setProducerType(ProducerType producerType) {
+        public Builder<T> setProducerType(ProducerType producerType) {
             this.producerType = Objects.requireNonNull(producerType);
             return this;
         }
@@ -235,34 +196,29 @@ public class RingBufferEventSequencer<E> implements EventSequencer<E> {
             return bufferSize;
         }
 
-        public Builder<E> setBufferSize(int bufferSize) {
+        public Builder<T> setBufferSize(int bufferSize) {
             this.bufferSize = bufferSize;
             return this;
         }
 
         @Override
-        public Builder<E> setFactory(EventFactory<? extends E> factory) {
-            return (Builder<E>) super.setFactory(factory);
+        public Builder<T> setProducerSleepNanos(long producerSleepNanos) {
+            return (Builder<T>) super.setProducerSleepNanos(producerSleepNanos);
         }
 
         @Override
-        public Builder<E> setProducerSleepNanos(long producerSleepNanos) {
-            return (Builder<E>) super.setProducerSleepNanos(producerSleepNanos);
+        public Builder<T> setWaitStrategy(WaitStrategy waitStrategy) {
+            return (Builder<T>) super.setWaitStrategy(waitStrategy);
         }
 
         @Override
-        public Builder<E> setWaitStrategy(WaitStrategy waitStrategy) {
-            return (Builder<E>) super.setWaitStrategy(waitStrategy);
+        public Builder<T> enableBlocker() {
+            return (Builder<T>) super.enableBlocker();
         }
 
         @Override
-        public Builder<E> enableBlocker() {
-            return (Builder<E>) super.enableBlocker();
-        }
-
-        @Override
-        public Builder<E> disableBlocker() {
-            return (Builder<E>) super.disableBlocker();
+        public Builder<T> disableBlocker() {
+            return (Builder<T>) super.disableBlocker();
         }
     }
 
