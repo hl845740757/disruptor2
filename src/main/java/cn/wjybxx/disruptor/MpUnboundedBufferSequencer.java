@@ -73,6 +73,7 @@ public final class MpUnboundedBufferSequencer<T> implements ProducerBarrier, Seq
     public void publish(long sequence) {
         MpUnboundedBufferChunk<T> chunk = buffer.producerChunkForSequence(sequence);
         chunk.publish((int) (sequence - chunk.minSequence()));
+        signalAllWhenBlocking();
     }
 
     @Override
@@ -83,12 +84,16 @@ public final class MpUnboundedBufferSequencer<T> implements ProducerBarrier, Seq
             chunk.publish((int) (lo - minSequence), chunk.length() - 1);
 
             lo = minSequence + chunk.length();
-            chunk = buffer.producerChunkForSequence(lo); // 下一个块可能尚未构造(用户在finally块中发布序号，异常的情况下也会发布序号)
+            chunk = chunk.lvNext();
+            if (chunk == null) { // 下一个块可能尚未构造(用户在finally块中发布序号，异常的情况下也会发布序号)
+                chunk = buffer.producerChunkForSequence(lo);
+            }
         }
         {
             long minSequence = chunk.minSequence();
             chunk.publish((int) (lo - minSequence), (int) (hi - minSequence));
         }
+        signalAllWhenBlocking();
     }
 
     @Override
@@ -112,7 +117,7 @@ public final class MpUnboundedBufferSequencer<T> implements ProducerBarrier, Seq
             if (chunk == null) { // 下一个块可能尚未被填充（正在构造）
                 return minSequence + highestIndex;
             }
-            lo = chunk.minSequence();
+            lo = minSequence + maxIndex + 1;
         }
         {
             long minSequence = chunk.minSequence();
